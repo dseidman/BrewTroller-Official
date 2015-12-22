@@ -271,13 +271,9 @@ void screenInit() {
         LCD.writeCustChar(2, 0, 4);
         LCD.writeCustChar(2, 1, 5);
         LCD.writeCustChar(2, 2, 6);
-	#ifdef CUSTOM_NAME_1
-		LCD.print_P(3, 0, PSTR(CUSTOM_NAME_1));
-	#else
-		LCD.print_P(3, 0, BT);
-	#endif
-	LCD.print_P(3, 12, BTVER);
-	LCD.lPad(3, 16, itoa(BUILDNUM, buf, 10), 4, '0');
+        LCD.print_P(3, 0, BT);
+        LCD.print_P(3, 12, BTVER);
+        LCD.lPad(3, 16, itoa(BUILDNUM, buf, 10), 4, '0');
 #endif
 #ifdef LOGO_BREWTROLLER
         LCD.setCustChar_P(0, BMP0);
@@ -290,16 +286,10 @@ void screenInit() {
         LCD.writeCustChar(0, 4, 2);
         LCD.writeCustChar(1, 3, 3);
         LCD.writeCustChar(1, 4, 4);
- 	#ifdef CUSTOM_NAME_1
-		LCD.print_P(1, 6, PSTR(CUSTOM_NAME_1));
-		LCD.print_P(2, 6, PSTR(CUSTOM_NAME_2));
-		LCD.print_P(3, 0, UIStrings::Generic::BTVER);
-	#else
- 		LCD.print_P(1, 6, UIStrings::Generic::BT);
- 		LCD.print_P(2, 6, UIStrings::Generic::BTVER);
- 		LCD.print_P(3, 0, UIStrings::HomeScreen::BT_URL);
-	#endif
- #endif
+        LCD.print_P(1, 6, UIStrings::Generic::BT);
+        LCD.print_P(2, 6, UIStrings::Generic::BTVER);
+        LCD.print_P(3, 0, UIStrings::HomeScreen::BT_URL);
+#endif
         
     }
     else if (activeScreen == SCREEN_FILL) {
@@ -311,10 +301,10 @@ void screenInit() {
         LCD.print_P(0, 16, UIStrings::Vessel::TITLE_VS_MASH);
         LCD.print_P(1, 1, UIStrings::Generic::TARGET);
         LCD.print_P(2, 1, UIStrings::Generic::ACTUAL);
-        vftoa(vessels[VS_HLT]->getTargetVolume(), buf, 1000, 1);
+        vftoa(tgtVol[VS_HLT], buf, 1000, 1);
         truncFloat(buf, 5);
         LCD.lPad(1, 9, buf, 5, ' ');
-        vftoa(vessels[VS_MASH]->getTargetVolume(), buf, 1000, 1);
+        vftoa(tgtVol[VS_MASH], buf, 1000, 1);
         truncFloat(buf, 5);
         LCD.lPad(1, 15, buf, 5, ' ');
         
@@ -411,10 +401,10 @@ void screenInit() {
         
         if (screenLock) {
             Encoder.setMin(0);
-            Encoder.setMax(vessels[VS_KETTLE]->getMaxPower());
-            Encoder.setCount(vessels[VS_KETTLE]->getOutput()/ vessels[VS_KETTLE]->getPIDCycle());
+            Encoder.setMax(PIDLIMIT_KETTLE);
+            Encoder.setCount(PIDOutput[VS_KETTLE]/PIDCycle[VS_KETTLE]);
             //If Kettle is off keep it off until unlocked
-            if (!vessels[VS_KETTLE]->getSetpoint()) boilControlState = CONTROLSTATE_OFF;
+            if (!setpoint[VS_KETTLE]) boilControlState = CONTROLSTATE_OFF;
         }
         
     }
@@ -470,11 +460,11 @@ void screenRefresh() {
     }
     else if (activeScreen == SCREEN_FILL) {
         char spacePad = ' ';
-        vftoa(vessels[VS_HLT]->getVolume(), buf, 1000, 1);
+        vftoa(volAvg[VS_HLT], buf, 1000, 1);
         truncFloat(buf, 5);
         LCD.lPad(2, 9, buf, 5, spacePad);
         
-        vftoa(vessels[VS_MASH]->getVolume(), buf, 1000, 1);
+        vftoa(volAvg[VS_MASH], buf, 1000, 1);
         truncFloat(buf, 5);
         LCD.lPad(2, 15, buf, 5, spacePad);
         
@@ -504,11 +494,11 @@ void screenRefresh() {
         // The DIRECT_FIRED_RIMS option uses a different screen layout, so the logic just
         // does not work.  So two blocks are required.
 #ifdef DIRECT_FIRED_RIMS
-        byte vesselNames[3] = {VS_HLT, VS_MASH, VS_MASH};
+        byte vessels[3] = {VS_HLT, VS_MASH, VS_MASH};
         byte temps[3] = {TS_HLT, TS_MASH, RIMS_TEMP_SENSOR};
         byte heatSources[3] = {VS_HLT, VS_MASH, VS_STEAM};
         for (byte i = 0; i <= 2; i++) {
-            vftoa(setpoint[vesselNames[i]], buf, 100, 1);
+            vftoa(setpoint[vessels[i]], buf, 100, 1);
             truncFloat(buf, 4);
             LCD.lPad(i + 1, 15, buf, 4, ' ');
             vftoa(temp[temps[i]], buf, 100, 1);
@@ -519,7 +509,7 @@ void screenRefresh() {
             } else {
                 LCD.lPad(i + 1, 9, buf, 4, ' ');
             }
-            if (PIDEnabled[vesselNames[i]]) {
+            if (PIDEnabled[vessels[i]]) {
                 // There is no good way to currently show this.
                 // Removing for now.
                 LCD.print_P(i + 1, 6, UIStrings::MashStep::OCTOTHORPE);
@@ -533,23 +523,23 @@ void screenRefresh() {
         }
 #else
         for (byte i = VS_HLT; i <= VS_MASH; i++) {
-            vftoa(vessels[i]->getSetpoint(), buf, 100, 1);
+            vftoa(setpoint[i], buf, 100, 1);
             truncFloat(buf, 4);
             LCD.lPad(1, i * 6 + 9, buf, 4, ' ');
-            vftoa(vessels[i]->getTemperature(), buf, 100, 1);
+            vftoa(temp[i], buf, 100, 1);
             truncFloat(buf, 4);
-            if (vessels[i]->getTemperature() == BAD_TEMP) {
+            if (temp[i] == BAD_TEMP) {
                 LCD.print_P(2, i * 6 + 9, UIStrings::Generic::TEMPBLANK);
             } else {
                 LCD.lPad(2, i * 6 + 9, buf, 4, ' ');
             }
             byte pct;
-            if (vessels[i]->isPID()) {
-                pct = vessels[i]->getOutput() / vessels[i]->getPIDCycle();
+            if (PIDEnabled[i]) {
+                pct = PIDOutput[i] / PIDCycle[i];
                 if (pct == 0) strcpy_P(buf, UIStrings::Generic::OFF);
                 else if (pct == 100) concatPSTRS(buf, UIStrings::Generic::SPACE, UIStrings::Generic::ON);
                 else { itoa(pct, buf, 10); strcat(buf, "%"); }
-            } else if (vessels[i]->isOn()) {
+            } else if (heatStatus[i]) {
                 concatPSTRS(buf, UIStrings::Generic::SPACE, UIStrings::Generic::ON);
                 pct = 100;
             } else {
@@ -565,27 +555,27 @@ void screenRefresh() {
         //Refresh Screen: Sparge
 #ifdef VOLUME_MANUAL
         // In manual volume mode show the target volumes instead of the current volumes
-        vftoa(vessels[VS_HLT]->getTargetVolume(), buf, 1000, 1);
+        vftoa(tgtVol[VS_HLT], buf, 1000, 1);
         truncFloat(buf, 6);
         LCD.lPad(1, 14, buf, 6, ' ');
         
-        vftoa(vessels[VS_MASH]->getTargetVolume(), buf, 1000, 1);
+        vftoa(tgtVol[VS_MASH], buf, 1000, 1);
         truncFloat(buf, 6);
         LCD.lPad(2, 14, buf, 6, ' ');
         
-        vftoa(vessels[VS_KETTLE]->getTargetVolume(), buf, 1000, 1);
+        vftoa(tgtVol[VS_KETTLE], buf, 1000, 1);
         truncFloat(buf, 6);
         LCD.lPad(3, 14, buf, 6, ' ');
 #else
-        vftoa(vessels[VS_HLT]->getVolume(), buf, 1000, 1);
+        vftoa(volAvg[VS_HLT], buf, 1000, 1);
         truncFloat(buf, 6);
         LCD.lPad(1, 14, buf, 6, ' ');
         
-        vftoa(vessels[VS_MASH]->getVolume(), buf, 1000, 1);
+        vftoa(volAvg[VS_MASH], buf, 1000, 1);
         truncFloat(buf, 6);
         LCD.lPad(2, 14, buf, 6, ' ');
         
-        vftoa(vessels[VS_KETTLE]->getVolume(), buf, 1000, 1);
+        vftoa(volAvg[VS_KETTLE], buf, 1000, 1);
         truncFloat(buf, 6);
         LCD.lPad(3, 14, buf, 6, ' ');
 #endif
@@ -606,8 +596,10 @@ void screenRefresh() {
             }
         }
         
-        for (byte i = VS_HLT; i <= NUM_VESSELS; i++) {
-            vftoa(vessels[i]->getTemperature(), buf, 100, 1);
+        // Not sure what to do here, due to the very serious design
+        // defect of using temperature sensors IDs as the index variable.
+        for (byte i = TS_HLT; i <= TS_KETTLE; i++) {
+            vftoa(temp[i], buf, 100, 1);
             truncFloat(buf, 4);
             if (temp[i] == BAD_TEMP) LCD.print_P(i + 1, 8, UIStrings::Generic::TEMPBLANK); else LCD.lPad(i + 1, 8, buf, 4, ' ');
         }
@@ -630,34 +622,34 @@ void screenRefresh() {
         
         printTimer(TIMER_BOIL, 3, 0);
         
-        vftoa(vessels[VS_KETTLE]->getVolume(), buf, 1000, 1);
+        vftoa(volAvg[VS_KETTLE], buf, 1000, 1);
         truncFloat(buf, 5);
         LCD.lPad(2, 15, buf, 5, ' ');
         
-        if (vessels[VS_KETTLE]->isPID()) {
-            byte pct = vessels[VS_KETTLE]->getPercentOutput();
+        if (PIDEnabled[TS_KETTLE]) {
+            byte pct = PIDOutput[TS_KETTLE] / PIDCycle[TS_KETTLE];
             if (pct == 0) strcpy_P(buf, UIStrings::Generic::OFF);
             else if (pct == 100) concatPSTRS(buf, UIStrings::Generic::SPACE, UIStrings::Generic::ON);
             else { itoa(pct, buf, 10); strcat(buf, "%"); }
-        } else if (vessels[VS_KETTLE]->isOn()) {
+        } else if (heatStatus[TS_KETTLE]) {
             concatPSTRS(buf, UIStrings::Generic::SPACE, UIStrings::Generic::ON);
         } else {
             strcpy_P(buf, UIStrings::Generic::OFF);
         }
         LCD.lPad(3, 17, buf, 3, ' ');
-        vftoa(vessels[VS_KETTLE]->getTemperature(), buf, 100, 1);
+        vftoa(temp[TS_KETTLE], buf, 100, 1);
         truncFloat(buf, 5);
-        if (vessels[VS_KETTLE]->getTemperature() == BAD_TEMP) LCD.print_P(1, 14, UIStrings::Generic::TEMPBLANK); else LCD.lPad(1, 14, buf, 5, ' ');
+        if (temp[TS_KETTLE] == BAD_TEMP) LCD.print_P(1, 14, UIStrings::Generic::TEMPBLANK); else LCD.lPad(1, 14, buf, 5, ' ');
         if (screenLock) {
             if (boilControlState != CONTROLSTATE_OFF) {
                 int encValue = Encoder.change();
                 if (encValue >= 0) {
                     boilControlState = CONTROLSTATE_ON;
-                    vessels[VS_KETTLE]->setSetpoint(encValue ? getBoilTemp() : 0);
-					vessels[VS_KETTLE]->updateOutput();
+                    setpoint[VS_KETTLE] = encValue ? getBoilTemp() * SETPOINT_MULT : 0;
+                    PIDOutput[VS_KETTLE] = PIDCycle[VS_KETTLE] * encValue;
                 }
             }
-            if (boilControlState == CONTROLSTATE_AUTO) Encoder.setCount(vessels[VS_KETTLE]->getPercentOutput());
+            if (boilControlState == CONTROLSTATE_AUTO) Encoder.setCount(PIDOutput[VS_KETTLE] / PIDCycle[VS_KETTLE]);
         }
         
     }
@@ -676,7 +668,7 @@ void screenRefresh() {
                 else if (encValue == 6) LCD.print_P(3, 3, UIStrings::Generic::ABORT);
             }
         }
-        if (vessels[VS_KETTLE]->getTemperature() == BAD_TEMP) LCD.print_P(1, 10, UIStrings::Generic::TEMPBLANK); else LCD.lPad(1, 10, itoa(vessels[VS_KETTLE]->getTemperature() / 100, buf, 10), 4, ' ');
+        if (temp[TS_KETTLE] == BAD_TEMP) LCD.print_P(1, 10, UIStrings::Generic::TEMPBLANK); else LCD.lPad(1, 10, itoa(temp[TS_KETTLE] / 100, buf, 10), 4, ' ');
         if (temp[TS_BEEROUT] == BAD_TEMP) LCD.print_P(2, 10, UIStrings::Generic::TEMPBLANK); else LCD.lPad(2, 10, itoa(temp[TS_BEEROUT] / 100, buf, 10), 4, ' ');
         if (temp[TS_H2OIN] == BAD_TEMP) LCD.print_P(1, 15, UIStrings::Generic::TEMPBLANK); else LCD.lPad(1, 15, itoa(temp[TS_H2OIN] / 100, buf, 10), 4, ' ');
         if (temp[TS_H2OOUT] == BAD_TEMP) LCD.print_P(2, 15, UIStrings::Generic::TEMPBLANK); else LCD.lPad(2, 15, itoa(temp[TS_H2OOUT] / 100, buf, 10), 4, ' ');
@@ -821,9 +813,9 @@ void screenEnter() {
                     fillMenu.setItem_P(UIStrings::Generic::EXIT, 255);
                     
                     byte lastOption = scrollMenu("Fill Menu", &fillMenu);
-                    if (lastOption == 0) { if(vessels[VS_HLT]->getTargetVolume() || vessels[VS_MASH]->getTargetVolume()) autoValve[AV_FILL] = 1; }
-                    else if (lastOption == 1) vessels[VS_HLT]->setTargetVolume(getValue_P(UIStrings::Shared::HLT_TARGET_VOL, vessels[VS_HLT]->getTargetVolume(), 1000, 9999999, UIStrings::Units::VOLUNIT));
-                    else if (lastOption == 2) vessels[VS_MASH]->setTargetVolume(getValue_P(UIStrings::FillMenu::MASH_TARGET_VOL, vessels[VS_MASH]->getTargetVolume(), 1000, 9999999, UIStrings::Units::VOLUNIT));
+                    if (lastOption == 0) { if(tgtVol[VS_HLT] || tgtVol[VS_MASH]) autoValve[AV_FILL] = 1; }
+                    else if (lastOption == 1) tgtVol[VS_HLT] = getValue_P(UIStrings::Shared::HLT_TARGET_VOL, tgtVol[VS_HLT], 1000, 9999999, UIStrings::Units::VOLUNIT);
+                    else if (lastOption == 2) tgtVol[VS_MASH] = getValue_P(UIStrings::FillMenu::MASH_TARGET_VOL, tgtVol[VS_MASH], 1000, 9999999, UIStrings::Units::VOLUNIT);
                     else if (lastOption == 3) continueClick();
                     else if (lastOption == 4) {
                         if (confirmAbort()) {
@@ -842,14 +834,14 @@ void screenEnter() {
                 
                 mashMenu.setItem_P(UIStrings::Shared::HLT_SETPOINT, 0);
                 mashMenu.appendItem_P(UIStrings::Generic::COLON, 0);
-                vftoa(vessels[VS_HLT]->getSetpoint(), buf, 100, 1);
+                vftoa(setpoint[VS_HLT], buf, 100, 1);
                 truncFloat(buf, 4);
                 mashMenu.appendItem(buf, 0);
                 mashMenu.appendItem_P(UIStrings::Units::TUNIT, 0);
                 
                 mashMenu.setItem_P(UIStrings::MashMenu::MASH_SETPOINT, 1);
                 mashMenu.appendItem_P(UIStrings::Generic::COLON, 1);
-                vftoa(vessels[VS_MASH]->getSetpoint(), buf, 100, 1);
+                vftoa(setpoint[VS_MASH], buf, 100, 1);
                 truncFloat(buf, 4);
                 mashMenu.appendItem(buf, 1);
                 mashMenu.appendItem_P(UIStrings::Units::TUNIT, 1);
@@ -864,17 +856,17 @@ void screenEnter() {
                 mashMenu.setItem_P(UIStrings::Generic::EXIT, 255);
                 
                 byte lastOption = scrollMenu("Mash Menu", &mashMenu);
-                if (lastOption == 0) setSetpoint(VS_HLT, getValue_P(UIStrings::Shared::HLT_SETPOINT, vessels[VS_HLT]->getSetpoint() , SETPOINT_DIV, 255, UIStrings::Units::TUNIT));
-                else if (lastOption == 1) setSetpoint(VS_MASH, getValue_P(UIStrings::MashMenu::MASH_SETPOINT, vessels[VS_MASH]->getSetpoint() , SETPOINT_DIV, 255, UIStrings::Units::TUNIT));
+                if (lastOption == 0) setSetpoint(VS_HLT, getValue_P(UIStrings::Shared::HLT_SETPOINT, setpoint[VS_HLT] / SETPOINT_MULT, SETPOINT_DIV, 255, UIStrings::Units::TUNIT));
+                else if (lastOption == 1) setSetpoint(VS_MASH, getValue_P(UIStrings::MashMenu::MASH_SETPOINT, setpoint[VS_MASH] / SETPOINT_MULT, SETPOINT_DIV, 255, UIStrings::Units::TUNIT));
                 else if (lastOption == 2) {
                     setTimer(TIMER_MASH, getTimerValue(UIStrings::MashMenu::MASH_TIMER, timerValue[TIMER_MASH] / 60000, 1));
                     //Force Preheated
-					vessels[VS_MASH]->ignorePreheat(); 
+                    preheated[VS_MASH] = 1;
                 }
                 else if (lastOption == 3) {
                     pauseTimer(TIMER_MASH);
                     //Force Preheated
-					vessels[VS_MASH]->ignorePreheat();
+                    preheated[VS_MASH] = 1;
                 }
                 else if (lastOption == 4) {
                     byte brewstep = BREWSTEP_NONE;
@@ -939,11 +931,11 @@ void screenEnter() {
                     spargeMenu.setItem_P(UIStrings::Generic::ABORT, 6);
                     spargeMenu.setItem_P(UIStrings::Generic::EXIT, 255);
                     byte lastOption = scrollMenu("Sparge Menu", &spargeMenu);
-                    if (lastOption == 0) { resetSpargeValves(); if(vessels[VS_HLT]->getTargetVolume()) autoValve[AV_SPARGEIN] = 1; }
-                    else if (lastOption == 1) { resetSpargeValves(); if(vessels[VS_KETTLE]->getTargetVolume()) autoValve[AV_SPARGEOUT] = 1; }
-                    else if (lastOption == 2) { resetSpargeValves(); if(vessels[VS_KETTLE]->getTargetVolume()) autoValve[AV_FLYSPARGE] = 1; }
-                    else if (lastOption == 3) vessels[VS_HLT]->setTargetVolume(getValue_P(UIStrings::Shared::HLT_TARGET_VOL, vessels[VS_HLT]->getTargetVolume(), 1000, 9999999, UIStrings::Units::VOLUNIT));
-                    else if (lastOption == 4) vessels[VS_KETTLE]->setTargetVolume(getValue_P(UIStrings::SpargeMenu::KETTLE_TARGET_VOL, vessels[VS_KETTLE]->getTargetVolume(), 1000, 9999999, UIStrings::Units::VOLUNIT));
+                    if (lastOption == 0) { resetSpargeValves(); if(tgtVol[VS_HLT]) autoValve[AV_SPARGEIN] = 1; }
+                    else if (lastOption == 1) { resetSpargeValves(); if(tgtVol[VS_KETTLE]) autoValve[AV_SPARGEOUT] = 1; }
+                    else if (lastOption == 2) { resetSpargeValves(); if(tgtVol[VS_KETTLE]) autoValve[AV_FLYSPARGE] = 1; }
+                    else if (lastOption == 3) tgtVol[VS_HLT] = getValue_P(UIStrings::Shared::HLT_TARGET_VOL, tgtVol[VS_HLT], 1000, 9999999, UIStrings::Units::VOLUNIT);
+                    else if (lastOption == 4) tgtVol[VS_KETTLE] = getValue_P(UIStrings::SpargeMenu::KETTLE_TARGET_VOL, tgtVol[VS_KETTLE], 1000, 9999999, UIStrings::Units::VOLUNIT);
                     else if (lastOption == 5) continueClick();
                     else if (lastOption == 6) {
                         if (confirmAbort()) {
@@ -981,7 +973,7 @@ void screenEnter() {
                 
                 boilMenu.setItem_P(UIStrings::BoilMenu::BOIL_TEMP, 3);
                 boilMenu.appendItem_P(UIStrings::Generic::COLON_SPACE, 3);
-                vftoa(getBoilTemp() , buf, 100, 1);
+                vftoa(getBoilTemp() * SETPOINT_MULT, buf, 100, 1);
                 truncFloat(buf, 5);
                 boilMenu.appendItem(buf, 3);
                 boilMenu.appendItem_P(UIStrings::Units::TUNIT, 3);
@@ -1002,17 +994,17 @@ void screenEnter() {
                 if (lastOption == 0) {
                     setTimer(TIMER_BOIL, getTimerValue(UIStrings::BoilMenu::BOIL_TIMER, timerValue[TIMER_BOIL] / 60000, 2));
                     //Force Preheated
-					vessels[VS_KETTLE]->ignorePreheat();
+                    preheated[VS_KETTLE] = 1;
                 }
                 else if (lastOption == 1) {
                     pauseTimer(TIMER_BOIL);
                     //Force Preheated
-					vessels[VS_KETTLE]->ignorePreheat();
+                    preheated[VS_KETTLE] = 1;
                 }
                 else if (lastOption == 2) boilControlMenu();
                 else if (lastOption == 3) {
                     setBoilTemp(getValue_P(UIStrings::BoilMenu::BOIL_TEMP, getBoilTemp(), SETPOINT_DIV, 255, UIStrings::Units::TUNIT));
-                    vessels[VS_KETTLE]->setSetpoint(getBoilTemp());
+                    setSetpoint(VS_KETTLE, getBoilTemp() * SETPOINT_MULT);
                 }
                 else if (lastOption == 4) setBoilPwr(getValue_P(UIStrings::BoilMenu::BOIL_POWER, boilPwr, 1, min(PIDLIMIT_KETTLE, 100), UIStrings::Generic::PERC_SYM));
                 else if (lastOption == 5) {
@@ -1085,13 +1077,14 @@ void boilControlMenu() {
     if (lastOption < NUM_CONTROLSTATES) boilControlState = (ControlState) lastOption;
     switch (boilControlState) {
         case CONTROLSTATE_OFF:
-            vessels[VS_KETTLE]->setSetpoint(0);
+            PIDOutput[VS_KETTLE] = 0;
+            setpoint[VS_KETTLE] = 0;
             break;
         case CONTROLSTATE_AUTO:
-            vessels[VS_KETTLE]->setSetpoint(getBoilTemp());
+            setpoint[VS_KETTLE] = getBoilTemp() * SETPOINT_MULT;
             break;
         case CONTROLSTATE_ON:
-            vessels[VS_KETTLE]->manualOutput(100);
+            setpoint[VS_KETTLE] = 1;
             break;
     }
 }
@@ -1155,9 +1148,9 @@ void startProgramMenu() {
             unsigned long mashVol = calcStrikeVol(profile);
             unsigned long grainVol = calcGrainVolume(profile);
             unsigned long preboilVol = calcPreboilVol(profile);
-            if (spargeVol > vessels[VS_HLT]->getCapacity()) warnHLT(spargeVol);
-            if (mashVol + grainVol > vessels[VS_MASH]->getCapacity()) warnMash(mashVol, grainVol);
-            if (preboilVol > vessels[VS_KETTLE]->getCapacity()) warnBoil(preboilVol);
+            if (spargeVol > getCapacity(VS_HLT)) warnHLT(spargeVol);
+            if (mashVol + grainVol > getCapacity(VS_MASH)) warnMash(mashVol, grainVol);
+            if (preboilVol > getCapacity(VS_KETTLE)) warnBoil(preboilVol);
             startMenu.setItem_P(UIStrings::Program::ProgramMenu::EDIT_PROG, 0);
             
             startMenu.setItem_P(UIStrings::Program::ProgramMenu::GRAIN_TEMP, 1);
@@ -1260,21 +1253,21 @@ void editProgram(byte pgm) {
         }
         
         progMenu.setItem_P(UIStrings::Program::ProgramMenu::HLT_TEMP, 4);
-        vftoa(getProgHLT(pgm), buf, 100, 1);
+        vftoa(getProgHLT(pgm) * SETPOINT_MULT, buf, 100, 1);
         truncFloat(buf, 4);
         progMenu.appendItem(buf, 4);
         progMenu.appendItem_P(UIStrings::Units::TUNIT, 4);
         
         progMenu.setItem_P(UIStrings::Program::ProgramMenu::SPARGE_TEMP, 5);
         progMenu.appendItem_P(UIStrings::Generic::COLON, 5);
-        vftoa(getProgSparge(pgm), buf, 100, 1);
+        vftoa(getProgSparge(pgm) * SETPOINT_MULT, buf, 100, 1);
         truncFloat(buf, 4);
         progMenu.appendItem(buf, 5);
         progMenu.appendItem_P(UIStrings::Units::TUNIT, 5);
         
         progMenu.setItem_P(UIStrings::Program::ProgramMenu::PITCH_TEMP, 6);
         progMenu.appendItem_P(UIStrings::Generic::COLON, 6);
-        vftoa(getProgPitch(pgm), buf, 100, 1);
+        vftoa(getProgPitch(pgm) * SETPOINT_MULT, buf, 100, 1);
         truncFloat(buf, 4);
         progMenu.appendItem(buf, 6);
         progMenu.appendItem_P(UIStrings::Units::TUNIT, 6);
@@ -1311,9 +1304,9 @@ void editProgram(byte pgm) {
         unsigned long mashVol = calcStrikeVol(pgm);
         unsigned long grainVol = calcGrainVolume(pgm);
         unsigned long preboilVol = calcPreboilVol(pgm);
-        if (spargeVol > vessels[VS_HLT]->getCapacity()) warnHLT(spargeVol);
-        if (mashVol + grainVol > vessels[VS_MASH]->getCapacity()) warnMash(mashVol, grainVol);
-        if (preboilVol > vessels[VS_KETTLE]->getCapacity()) warnBoil(preboilVol);
+        if (spargeVol > getCapacity(VS_HLT)) warnHLT(spargeVol);
+        if (mashVol + grainVol > getCapacity(VS_MASH)) warnMash(mashVol, grainVol);
+        if (preboilVol > getCapacity(VS_KETTLE)) warnBoil(preboilVol);
     }
 }
 
@@ -1384,7 +1377,7 @@ void editMashSchedule(byte pgm) {
             mashMenu.appendItem(itoa(getProgMashMins(pgm, i), buf, 10), i << 4 | OPT_SETMINS);
             mashMenu.appendItem(" min", i << 4 | OPT_SETMINS);
             
-            vftoa(getProgMashTemp(pgm, i) , buf, 100, 1);
+            vftoa(getProgMashTemp(pgm, i) * SETPOINT_MULT, buf, 100, 1);
             truncFloat(buf, 4);
             mashMenu.appendItem(buf, i << 4 | OPT_SETTEMP);
             mashMenu.appendItem_P(UIStrings::Units::TUNIT, i << 4 | OPT_SETTEMP);
@@ -2233,7 +2226,7 @@ void cfgOutputs() {
         //Low-nibble = menu item: OPT_XXXXXXXX (see #defines above)
         
         outputMenu.setItem_P(UIStrings::SystemSetup::OutputConfig::HLT_MODE, VS_HLT<<4 | OPT_MODE);
-        if (vessels[VS_HLT]->isPID()) {
+        if (PIDEnabled[VS_HLT]) {
             outputMenu.appendItem_P(UIStrings::SystemSetup::OutputConfig::PID_MODE, VS_HLT<<4 | OPT_MODE);
         }
         else {
@@ -2247,7 +2240,7 @@ void cfgOutputs() {
         outputMenu.appendItem_P(UIStrings::SystemSetup::OutputConfig::HYSTERESIS, VS_HLT<<4 | OPT_HYSTERESIS);
         
         outputMenu.setItem_P(UIStrings::SystemSetup::OutputConfig::MASH_MODE, VS_MASH<<4 | OPT_MODE);
-        if (vessels[VS_MASH]->isPID()) {
+        if (PIDEnabled[VS_MASH]) {
             outputMenu.appendItem_P(UIStrings::SystemSetup::OutputConfig::PID_MODE, VS_MASH<<4 | OPT_MODE);
         }
         else {
@@ -2261,7 +2254,7 @@ void cfgOutputs() {
         outputMenu.appendItem_P(UIStrings::SystemSetup::OutputConfig::HYSTERESIS, VS_MASH<<4 | OPT_HYSTERESIS);
         
         outputMenu.setItem_P(UIStrings::SystemSetup::OutputConfig::KETTLE_MODE, VS_KETTLE<<4 | OPT_MODE);
-        if (vessels[VS_KETTLE]->isPID()) {
+        if (PIDEnabled[VS_KETTLE]) {
             outputMenu.appendItem_P(UIStrings::SystemSetup::OutputConfig::PID_MODE, VS_KETTLE<<4 | OPT_MODE);
         }
         else {
@@ -2288,7 +2281,7 @@ void cfgOutputs() {
         
 #ifdef PID_FLOW_CONTROL
         outputMenu.setItem_P(UIStrings::SystemSetup::OutputConfig::SPARGE_PUMP_MODE, VS_PUMP<<4 | OPT_MODE);
-        if (PIDEnabled) {
+        if (PIDEnabled[VS_PUMP]) {
             outputMenu.appendItem_P(UIStrings::SystemSetup::OutputConfig::PID_MODE, VS_PUMP<<4 | OPT_MODE);
         }
         else {
@@ -2299,7 +2292,7 @@ void cfgOutputs() {
         outputMenu.setItem_P(UIStrings::SystemSetup::OutputConfig::PUMPFLOW, VS_PUMP<<4 | OPT_PRESS);
 #elif defined USESTEAM
         outputMenu.setItem_P(UIStrings::SystemSetup::OutputConfig::STEAM_MODE, VS_STEAM<<4 | OPT_MODE);
-        if (PIDEnabled) {
+        if (PIDEnabled[VS_STEAM]) {
             outputMenu.appendItem_P(UIStrings::SystemSetup::OutputConfig::PID_MODE, VS_STEAM<<4 | OPT_MODE);
         }
         else {
@@ -2328,14 +2321,19 @@ void cfgOutputs() {
                     strcpy_P(title, (char*)pgm_read_word(&(UIStrings::SystemSetup::TITLE_VS[vessel])));
         
         if ((lastOption & B00001111) == OPT_MODE) {
-            if (vessels[vessel]->isPID()) vessels[vessel]->setPID(false);
-            else vessels[vessel]->setPID(true);
+            if (PIDEnabled[vessel]) setPIDEnabled(vessel, 0);
+            else setPIDEnabled(vessel, 1);
         } else if ((lastOption & B00001111) == OPT_CYCLE) {
             strcat_P(title, UIStrings::SystemSetup::OutputConfig::PIDCYCLE);
-			vessels[vessel]->setPIDCycle(getValue(title, vessels[vessel]->getPIDCycle(), 10, 255, UIStrings::Shared::SEC));
+            setPIDCycle(vessel, getValue(title, PIDCycle[vessel], 10, 255, UIStrings::Shared::SEC));
+            pid[vessel].SetOutputLimits(0, PIDCycle[vessel] * pidLimits[vessel]);
+            
+        } else if ((lastOption & B00001111) == OPT_GAIN) {
+            strcat_P(title, UIStrings::SystemSetup::OutputConfig::PIDGAIN);
+            setPIDGain(title, vessel);
         } else if ((lastOption & B00001111) == OPT_HYSTERESIS) {
             strcat_P(title, UIStrings::SystemSetup::OutputConfig::HYSTERESIS);
-			vessels[vessel]->setHysteresis(getValue(title, vessels[vessel]->getHysteresis(), 10, 255, UIStrings::Units::TUNIT));
+            setHysteresis(vessel, getValue(title, hysteresis[vessel], 10, 255, UIStrings::Units::TUNIT));
 #if defined USESTEAM || defined PID_FLOW_CONTROL
         } else if ((lastOption & B00001111) == OPT_PRESS) {
 #ifdef PID_FLOW_CONTROL
@@ -2363,9 +2361,9 @@ void cfgOutputs() {
 }
 
 void setPIDGain(char sTitle[], byte vessel) {
-    byte retP = vessels[vessel]->getP();
-    byte retI = vessels[vessel]->getI();
-    byte retD = vessels[vessel]->getD();
+    byte retP = pid[vessel].GetP_Param();
+    byte retI = pid[vessel].GetI_Param();
+    byte retD = pid[vessel].GetD_Param();
     byte cursorPos = 0; //0 = p, 1 = i, 2 = d, 3 = OK
     boolean cursorState = 0; //0 = Unselected, 1 = Selected
     Encoder.setMin(0);
@@ -2423,8 +2421,9 @@ void setPIDGain(char sTitle[], byte vessel) {
         }
         if (Encoder.ok()) {
             if (cursorPos == 3) {
-                vessels[vessel]->setTunings(retP, retI, retD);
-				
+                setPIDp(vessel, retP);
+                setPIDi(vessel, retI);
+                setPIDd(vessel, retD);
 #ifdef DEBUG_PID_GAIN
                 logDebugPIDGain(vessel);
 #endif
@@ -2458,7 +2457,7 @@ void cfgVolumes() {
     //High-nibble = vessel: VS_HLT-VS_STEAM/VS_PUMP
     //Low-nibble = menu item: OPT_XXXXXXXX (see #defines above)
     menu volMenu(3, 11);
-    for (byte vessel = VS_HLT; vessel <= NUM_VESSELS; vessel++) {
+    for (byte vessel = VS_HLT; vessel <= VS_KETTLE; vessel++) {
         volMenu.setItem_P((char*)pgm_read_word(&(UIStrings::SystemSetup::TITLE_VS[vessel])), vessel<<4 | OPT_CAPACITY);
         volMenu.appendItem_P(UIStrings::SystemSetup::VolumeConfig::CAPACITY, vessel<<4 | OPT_CAPACITY);
         
@@ -2481,17 +2480,17 @@ void cfgVolumes() {
 #elif defined USESTEAM
             if (vessel >= VS_HLT && vessel <= VS_STEAM)
 #else
-                if (vessel >= VS_HLT && vessel <= NUM_VESSELS)
+                if (vessel >= VS_HLT && vessel <= VS_KETTLE)
 #endif
                     strcpy_P(title, (char*)pgm_read_word(&(UIStrings::SystemSetup::TITLE_VS[vessel])));
         
         if ((lastOption & B00001111) == OPT_CAPACITY) {
             strcat_P(title, UIStrings::SystemSetup::VolumeConfig::CAPACITY);
-            vessels[vessel]->setCapacity(getValue(title, vessels[vessel]->getCapacity(), 1000, 9999999, UIStrings::Units::VOLUNIT));
+            setCapacity(vessel, getValue(title, getCapacity(vessel), 1000, 9999999, UIStrings::Units::VOLUNIT));
         }
         else if ((lastOption & B00001111) == OPT_DEADSPACE) {
             strcat_P(title, UIStrings::SystemSetup::VolumeConfig::DEADSPACE);
-            vessels[vessel]->setDeadspace(getValue(title, vessels[vessel]->getDeadspace(), 1000, 65535, UIStrings::Units::VOLUNIT));
+            setVolLoss(vessel, getValue(title, getVolLoss(vessel), 1000, 65535, UIStrings::Units::VOLUNIT));
         }
         else if ((lastOption & B00001111) == OPT_CALIBRATION) {
             strcat_P(title, UIStrings::SystemSetup::VolumeConfig::CALIBRATION);
@@ -2509,18 +2508,15 @@ void cfgVolumes() {
 void volCalibMenu(char sTitle[], byte vessel) {
     menu calibMenu(3, 11);
     while(1) {
-		unsigned long calibVol, calibVal;
-        for(byte i = 0; i < 10; i++) {
-			calibVol = vessels[vessel]->getCalibrationVolume(i);
-			calibVal = vessels[vessel]->getCalibrationPressure(i);
-            if (calibVal > 0) {
-                vftoa(calibVol, buf, 1000, 1);
+        for(byte i = 0; i < VOL_CALIB_COUNT; i++) {
+            if (calibVals[vessel][i] > 0) {
+                vftoa(calibVols[vessel][i], buf, 1000, 1);
                 truncFloat(buf, 6);
                 calibMenu.setItem(buf, i);
                 calibMenu.appendItem_P(UIStrings::Generic::SPACE, i);
                 calibMenu.appendItem_P(UIStrings::Units::VOLUNIT, i);
                 calibMenu.appendItem_P(UIStrings::SystemSetup::VolumeCalibration::OPEN_PAREN, i);
-                calibMenu.appendItem(itoa(calibVal, buf, 10), i);
+                calibMenu.appendItem(itoa(calibVals[vessel][i], buf, 10), i);
                 calibMenu.appendItem_P(UIStrings::SystemSetup::VolumeCalibration::CLOSE_PAREN, i);
             } else calibMenu.setItem_P(UIStrings::SystemSetup::VolumeCalibration::OPEN, i);
         }
@@ -2528,7 +2524,7 @@ void volCalibMenu(char sTitle[], byte vessel) {
         byte lastOption = scrollMenu(sTitle, &calibMenu);
         if (lastOption > 9) return;
         else {
-            if (vessels[vessel]->getCalibrationPressure(lastOption) > 0) {
+            if (calibVals[vessel][lastOption] > 0) {
                 //There is already a value saved for that volume.
                 //Review the saved value for the selected volume value.
                 volCalibEntryMenu(vessel, lastOption);
@@ -2536,7 +2532,8 @@ void volCalibMenu(char sTitle[], byte vessel) {
 #ifdef DEBUG_VOLCALIB
                 logVolCalib("Value before dialog:", analogRead(vSensor[vessel]));
 #endif
-                vessels[vessel]->updateVolumeCalibration(lastOption, 0, getValue_P(UIStrings::SystemSetup::VolumeCalibration::CURR_VOL, 0, 1000, 9999999, UIStrings::Units::VOLUNIT)); //Set temporary the value to zero. It will be updated in the next step.
+                
+                setVolCalib(vessel, lastOption, 0, getValue_P(UIStrings::SystemSetup::VolumeCalibration::CURR_VOL, 0, 1000, 9999999, UIStrings::Units::VOLUNIT)); //Set temporary the value to zero. It will be updated in the next step.
                 volCalibEntryMenu(vessel, lastOption);
                 
 #ifdef DEBUG_VOLCALIB
@@ -2555,7 +2552,7 @@ void volCalibEntryMenu(byte vessel, byte entry) {
     menu calibMenu(3, 4);
     
     while(1) {
-        vftoa(vessels[vessel]->getCalibrationVolume(entry), buf, 1000, 1);
+        vftoa(calibVols[vessel][entry], buf, 1000, 1);
         truncFloat(buf, 6);
         strcpy_P(sTitle, UIStrings::SystemSetup::VolumeCalibration::CALIBRATE);
         strcat_P(sTitle, UIStrings::Generic::SPACE);
@@ -2563,10 +2560,10 @@ void volCalibEntryMenu(byte vessel, byte entry) {
         strcat_P(sTitle, UIStrings::Generic::SPACE);
         strcat_P(sTitle, UIStrings::Units::VOLUNIT);
         
-        unsigned int newSensorValue = vessels[vessel]->getCalibrationValue();
+        unsigned int newSensorValue = GetCalibrationValue(vessel);
         
         calibMenu.setItem_P(UIStrings::SystemSetup::VolumeCalibration::UPDATE, 0);
-        calibMenu.appendItem(itoa(vessels[vessel]->getCalibrationPressure(entry), buf, 10), 0); //Show the currently saved value which can be zero.
+        calibMenu.appendItem(itoa(calibVals[vessel][entry], buf, 10), 0); //Show the currently saved value which can be zero.
         calibMenu.appendItem_P(UIStrings::SystemSetup::VolumeCalibration::TO, 0);
         calibMenu.appendItem(itoa(newSensorValue, buf, 10), 0); //Show the value to be saved. So users know what to expect.
         calibMenu.setItem_P(UIStrings::SystemSetup::VolumeCalibration::MANUAL_ENTRY, 1);
@@ -2576,17 +2573,17 @@ void volCalibEntryMenu(byte vessel, byte entry) {
         byte lastOption = scrollMenu(sTitle, &calibMenu);
         
         if (lastOption == 0) {
-            //Update the volume value. Calls the vessel class to update both internal representation and eeprom
-            vessels[vessel]->updateVolumeCalibration( entry, newSensorValue, vessels[vessel]->getCalibrationVolume(entry)); 
+            //Update the volume value.
+            setVolCalib(vessel, entry, newSensorValue, calibVols[vessel][entry]);
             return;
         } else if (lastOption == 1) {
-            newSensorValue = (unsigned int) getValue_P(UIStrings::SystemSetup::VolumeCalibration::MANUAL_VOL_ENTRY, vessels[vessel]->getCalibrationPressure(entry), 1, 1023, UIStrings::Generic::EMPTY);
-			vessels[vessel]->updateVolumeCalibration(entry, newSensorValue, vessels[vessel]->getCalibrationVolume(entry));
+            newSensorValue = (unsigned int) getValue_P(UIStrings::SystemSetup::VolumeCalibration::MANUAL_VOL_ENTRY, calibVals[vessel][entry], 1, 1023, UIStrings::Generic::EMPTY);
+            setVolCalib(vessel, entry, newSensorValue, calibVols[vessel][entry]);
             return;
         } else if (lastOption == 2) {
             //Delete the volume and value.
             if(confirmDel()) {
-				vessels[vessel]->updateVolumeCalibration(entry, 0, 0);
+                setVolCalib(vessel, entry, 0, 0);
                 return;
             }
         } else return;

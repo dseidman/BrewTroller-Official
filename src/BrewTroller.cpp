@@ -61,12 +61,11 @@ Compiled on Arduino-0022 (http://arduino.cc/en/Main/Software)
 #include "StepLogic.h"
 #include "Outputs.h"
 #include "Events.h"
-#include "EEPROM.h"
+#include "EEPROM.hpp"
 #include "Temp.h"
 #include "BrewCore.h"
 #include "Com.h"
 #include "BrewTroller.h"
-#include "Vessel.h"
 
 const void(* softReset) (void) = 0;
 
@@ -109,23 +108,8 @@ const void(* softReset) (void) = 0;
 //**********************************************************************************
 // Globals
 //**********************************************************************************
-
-/*The vessels array holds definitions for all of our working vessels.
-The vessels are defined as follows:
-vessels[VS_HLT] is the traditional HLT vessel that heats strike water.
-vessels[VS_MASH] is the vessel where the grain goes.
-vessels[VS_KETTLE] is the vessel where the boil happens.
-
-	vessel that VS_SPARGE is equal to. 
-It is entirely possible for some of the VS_to be identical. For example, in a BIAB system, they are all identical.
-
-TODO: Convert from HLT to VS_STRIKE and VS_SPARGE to allow more configuration of where strike and sparge water are heated.
-
-Note that steam and pump, while assigned a VS_STEAM and VS_PUMP identifier in some hardware configs, are not truly vessels and are not part of this array.
-Rather, steam is managed through the VS_MASH vessel, and VS_PUMP is managed through the valve profile code.
-*/
-Vessel* vessels[NUM_VESSELS];
-pin alarmPin;
+//Heat Output Pin Array
+pin heatPin[4], alarmPin;
 
 #ifdef DIGITAL_INPUTS
 pin digInPin[DIGIN_COUNT];
@@ -138,13 +122,24 @@ boolean estop = 0;
 pin hbPin;
 #endif
 
+//Volume Sensor Pin Array
+#ifdef HLT_AS_KETTLE
+  byte vSensor[3] = { HLTVOL_APIN, MASHVOL_APIN, HLTVOL_APIN};
+#elif defined KETTLE_AS_MASH
+  byte vSensor[3] = { HLTVOL_APIN, KETTLEVOL_APIN, KETTLEVOL_APIN};
+#elif defined SINGLE_VESSEL_SUPPORT
+  byte vSensor[3] = { HLTVOL_APIN, HLTVOL_APIN, HLTVOL_APIN};
+#else
+byte vSensor[3] = { HLTVOL_APIN, MASHVOL_APIN, KETTLEVOL_APIN};
+#endif
+
 //8-byte Temperature Sensor Address x9 Sensors
 byte tSensor[9][8];
 int temp[9];
 
 //Volume in (thousandths of gal/l)
-unsigned long tgtVol[NUM_VESSELS];
-
+unsigned long tgtVol[3], volAvg[3], calibVols[3][10];
+unsigned int calibVals[3][10];
 #ifdef SPARGE_IN_PUMP_CONTROL
 unsigned long prevSpargeVol[2] = {0,0};
 #endif
@@ -201,32 +196,43 @@ PVOutMODBUS *ValvesMB[PVOUT_MODBUS_MAXBOARDS];
 char buf[20];
 
 //Output Globals
-double PIDInput, PIDOutput, setpoint;
+//TODO: Why is setpoint of type double? it's stored in eeprom as uint8_t
+double PIDInput[4], PIDOutput[4], setpoint[4];
 #ifdef PID_FEED_FORWARD
 double FFBias;
 #endif
-byte PIDCycle, hysteresis;
+byte PIDCycle[4], hysteresis[4];
 #ifdef PWM_BY_TIMER
 unsigned int cycleStart[4] = {0,0,0,0};
 #else
 unsigned long cycleStart[4] = {0,0,0,0};
 #endif
-boolean heatStatus, PIDEnabled;
+boolean heatStatus[4], PIDEnabled[4];
 unsigned int steamPSens, steamZero;
 
-
+byte pidLimits[4] = { PIDLIMIT_HLT, PIDLIMIT_MASH, PIDLIMIT_KETTLE, PIDLIMIT_STEAM };
 
 //Steam Pressure in thousandths
 unsigned long steamPressure;
 byte boilPwr;
 
-PID pid =
-#ifdef PID_FLOW_CONTROL
-PID(&PIDInput, &PIDOutput &setpoint, 3, 4, 1);
-#else
-PID(&PIDInput, &PIDOutput, &setpoint, 3, 4, 1);
+PID pid[4] = {
+        PID(&PIDInput[VS_HLT], &PIDOutput[VS_HLT], &setpoint[VS_HLT], 3, 4, 1),
+
+#ifdef PID_FEED_FORWARD
+    PID(&PIDInput[VS_MASH], &PIDOutput[VS_MASH], &setpoint[VS_MASH], &FFBias, 3, 4, 1),
+  #else
+        PID(&PIDInput[VS_MASH], &PIDOutput[VS_MASH], &setpoint[VS_MASH], 3, 4, 1),
 #endif
 
+        PID(&PIDInput[VS_KETTLE], &PIDOutput[VS_KETTLE], &setpoint[VS_KETTLE], 3, 4, 1),
+
+#ifdef PID_FLOW_CONTROL
+    PID(&PIDInput[VS_PUMP], &PIDOutput[VS_PUMP], &setpoint[VS_PUMP], 3, 4, 1)
+  #else
+        PID(&PIDInput[VS_STEAM], &PIDOutput[VS_STEAM], &setpoint[VS_STEAM], 3, 4, 1)
+#endif
+};
 #if defined PID_FLOW_CONTROL && defined PID_CONTROL_MANUAL
   unsigned long nextcompute;
   byte additioncount[2];
@@ -247,6 +253,7 @@ boolean timerStatus[2], alarmStatus;
 boolean logData = LOG_INITSTATUS;
 
 //Brew Step Logic Globals
+boolean preheated[4];
 ControlState boilControlState = CONTROLSTATE_OFF;
 
 //Bit 1 = Boil; Bit 2-11 (See Below); Bit 12 = End of Boil; Bit 13-15 (Open); Bit 16 = Preboil (If Compile Option Enabled)
@@ -343,12 +350,13 @@ void setup() {
 
     tempInit();
 
-    //Check for cfgVersion variable and update EEPROM if necessary (EEPROM.pde)
-    checkConfig();
+    //Initialize the eeprom configuration manager
+    ConfigManager::init(&eepromConfig);
 
 
     //Load global variable values stored in EEPROM (EEPROM.pde)
-    loadSetup();
+    //TODO: Remove all global variables, so loading their values will be un-necessary.
+    ConfigManager::loadConfig();
 
 #ifdef DIGITAL_INPUTS
     //Digital Input Interrupt Setup
@@ -367,9 +375,6 @@ void setup() {
 #ifndef NOUI
     uiInit();
 #endif
-
-	//Initialize vessels
-	initVessels();
 
     //Init of program threads will call event handler to set active screen and must be called after uiInit()
     programThreadsInit();
@@ -401,8 +406,5 @@ int main(void)
         if (serialEventRun) serialEventRun();
     }
 
-	//Probably unnecessary given the single-process nature of Arduino, but good housekeeping nonetheless
-	for (byte i = 0; i < NUM_VESSELS; i++)
-		if (vessels[i]) delete vessels[i];
     return 0;
 }

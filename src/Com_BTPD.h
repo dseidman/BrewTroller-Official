@@ -19,10 +19,6 @@
 
 void updateBTPD();
 
-void sendVesselTemp(byte chan, Vessel* v);
-
-void sendVesselVol(byte chan, Vessel* v);
-
 void sendVsTemp(byte chan, byte sensor, byte vessel);
 
 void sendVsVol(byte chan, byte vessel);

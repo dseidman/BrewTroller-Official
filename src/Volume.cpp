@@ -36,8 +36,12 @@ byte volCount;
 void updateVols() {
   //Check volume on VOLUME_READ_INTERVAL and update vol with average of VOLUME_READ_COUNT readings
   if (millis() - lastVolChk > VOLUME_READ_INTERVAL) {
-    for (byte i = VS_HLT; i <= NUM_VESSELS; i++) {
-		vessels[i]->takeVolumeReading();
+    for (byte i = VS_HLT; i <= VS_KETTLE; i++) {
+      volReadings[i][volCount] = readVolume(vSensor[i], calibVols[i], calibVals[i]);
+	  unsigned long volAvgTemp = volReadings[i][0];
+	  for (byte j = 1; j < VOLUME_READ_COUNT; j++)
+	  volAvgTemp += volReadings[i][j];
+	  volAvg[i] = volAvgTemp / VOLUME_READ_COUNT; 
     }
     volCount++;
     if (volCount >= VOLUME_READ_COUNT) volCount = 0;
@@ -51,9 +55,9 @@ void updateFlowRates() {
    unsigned long MiliToMin = 60000;
   //Check flowrate periodically (FLOWRATE_READ_INTERVAL)
   if (tempmill - lastFlowChk >= FLOWRATE_READ_INTERVAL) {
-    for (byte i = VS_HLT; i <= NUM_VESSELS; i++) {
+    for (byte i = VS_HLT; i <= VS_KETTLE; i++) {
       // note that the * 60000 is from converting thousands of a gallon / miliseconds to thousands of a gallon / minutes 
-      flowRate[i] = round((float)((float)(((float)vessels[i]->getVolume() - (float)prevFlowVol[i])) / (float)((float)tempmill - (float)lastFlowChk)) * (float)MiliToMin);
+      flowRate[i] = round((float)((float)(((float)volAvg[i] - (float)prevFlowVol[i])) / (float)((float)tempmill - (float)lastFlowChk)) * (float)MiliToMin);
       #ifdef DEBUG_VOL_READ
       logStart_P(LOGDEBUG);
       logField_P(PSTR("VOL_Calc"));
@@ -145,4 +149,20 @@ unsigned long readPressure( byte aPin, unsigned int sens, unsigned int zero) {
   #else
     return retValue * 29 / 200; 
   #endif
+}
+
+unsigned int GetCalibrationValue(byte vessel){
+  unsigned int newSensorValueAverage = 0;
+  
+  for(byte i = 0; i < VOLUME_READ_COUNT; i++){
+    newSensorValueAverage += analogRead(vSensor[vessel]);
+    unsigned long intervalEnd = millis() + VOLUME_READ_INTERVAL;
+    while(millis() < intervalEnd) {
+      #ifdef HEARTBEAT
+        heartbeat();
+      #endif
+    }  
+  }
+  
+  return (newSensorValueAverage / VOLUME_READ_COUNT);
 }

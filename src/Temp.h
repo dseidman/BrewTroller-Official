@@ -19,4 +19,8 @@ void getDSAddr(byte addrRet[8]);
 //Returns Int representing hundreths of degree
 int read_temp(byte* addr);
 
+#if defined MASH_AVG
+void mashAvg();
+#endif
+
 #endif

@@ -13,7 +13,7 @@ set(SOURCE_FILES
         Com_RGBIO8.h
         Com_S0ASC.cpp
         EEPROM.cpp
-        EEPROM.h
+        EEPROM.hpp
         Enum.h
         Events.cpp
         Events.h
@@ -35,8 +35,6 @@ set(SOURCE_FILES
         UIStrings.cpp
         Util.cpp
         Util.h
-		Vessel.h
-		Vessel.cpp
         Volume.cpp
         Volume.h)
 # Workaround to enable generated Config header to include Enum header
@@ -85,14 +83,6 @@ option(USEMETRIC "Use Metric Units" OFF)
 option(HLT_AS_KETTLE "Use HLT Vessel as Kettle Vessel" OFF)
 option(KETTLE_AS_MASH "Use Kettle Vessel as Mash Vessel" OFF)
 option(SINGLE_VESSEL_SUPPORT "Enable Single Vessel System Configuration" OFF)
-
-option(MASH_AVG_A1 "Average Aux1 into Mash Temperature" OFF)
-option(MASH_AVG_A2 "Average Aux2 into Mash Temperature" OFF)
-option(MASH_AVG_A3 "Average Aux3 into Mash Temperature" OFF)
-
-#Valid options are 0-3
-set(FF_OPT 0)
-add_definitions("-DFF_OPT=${FF_OPT}")
 
 #####
 # Volume Options

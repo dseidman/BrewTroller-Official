@@ -10,7 +10,6 @@
 #include "HardwareProfile.h"
 #include "PVOut.h"
 #include "UI_LCD.h"
-#include "Vessel.h"
 
 const extern void(* softReset) (void);
 
@@ -18,12 +17,9 @@ const extern void(* softReset) (void);
 // Compile Time Logic
 //**********************************************************************************
 
-#ifdef USEMETRIC
-  #define SETPOINT_MULT 50
-  #define SETPOINT_DIV 2
-#else
-#define SETPOINT_MULT 100
-#define SETPOINT_DIV 1
+//Enable Mash Avergaing Logic if any Mash_AVG_AUXx options were enabled
+#if defined MASH_AVG_AUX1 || defined MASH_AVG_AUX2 || defined MASH_AVG_AUX3
+  #define MASH_AVG
 #endif
 
 #ifndef STRIKE_TEMP_OFFSET
@@ -45,11 +41,6 @@ const extern void(* softReset) (void);
     #define EvapRateConversion 100
   #endif
 #endif
-
-struct ProgramThread {
-    byte activeStep;
-    byte recipe;
-};
 
 //**********************************************************************************
 // Globals
@@ -75,6 +66,9 @@ extern byte vSensor[3];
 extern byte tSensor[9][8];
 extern int temp[9];
 
+//Volume in (thousandths of gal/l)
+extern unsigned long tgtVol[3], volAvg[3], calibVols[3][10];
+extern unsigned int calibVals[3][10];
 #ifdef SPARGE_IN_PUMP_CONTROL
 extern unsigned long prevSpargeVol[2];
 #endif
@@ -127,24 +121,26 @@ extern PVOutMODBUS *ValvesMB[PVOUT_MODBUS_MAXBOARDS];
 extern char buf[20];
 
 //Output Globals
-extern Vessel* vessels[3];
-extern double PIDInput, PIDOutput, setpoint;
-extern byte PIDCycle, hysteresis;
+extern double PIDInput[4], PIDOutput[4], setpoint[4];
+#ifdef PID_FEED_FORWARD
+extern double FFBias;
+#endif
+extern byte PIDCycle[4], hysteresis[4];
 #ifdef PWM_BY_TIMER
 extern unsigned int cycleStart[4];
 #else
 extern unsigned long cycleStart[4];
 #endif
-extern boolean heatStatus, PIDEnabled;
+extern boolean heatStatus[4], PIDEnabled[4];
 extern unsigned int steamPSens, steamZero;
 
-extern byte pidLimits;
+extern byte pidLimits[4];
 
 //Steam Pressure in thousandths
 extern unsigned long steamPressure;
 extern byte boilPwr;
 
-extern PID pid;
+extern PID pid[4];
 #if defined PID_FLOW_CONTROL && defined PID_CONTROL_MANUAL
   extern unsigned long nextcompute;
   extern byte additioncount[2];
@@ -165,7 +161,7 @@ extern boolean timerStatus[2], alarmStatus;
 extern boolean logData;
 
 //Brew Step Logic Globals
-
+extern boolean preheated[4];
 extern ControlState boilControlState;
 
 //Bit 1 = Boil; Bit 2-11 (See Below); Bit 12 = End of Boil; Bit 13-15 (Open); Bit 16 = Preboil (If Compile Option Enabled)
@@ -184,41 +180,5 @@ extern const char LOGDATA[];
 extern unsigned int timer1_overflow_count = 0;
 extern unsigned int PIDOutputCountEquivalent[4][2] = {{0,0},{0,0},{0,0},{0,0}};
 #endif
-
-// set what the PID cycle time should be based on how fast the temp sensors will respond
-#if TS_ONEWIRE_RES == 12
-#define PID_CYCLE_TIME 750
-#elif TS_ONEWIRE_RES == 11
-#define PID_CYCLE_TIME 375
-#elif TS_ONEWIRE_RES == 10
-#define PID_CYCLE_TIME 188
-#elif TS_ONEWIRE_RES == 9
-#define PID_CYCLE_TIME 94
-#else
-// should not be this value, fail the compile
-#ERROR
-#endif
-
-constexpr bool MASH_AVG_AUX1 =
-#ifdef MASH_AVG_A1
-true;
-#else
-false;
-#endif
-
-constexpr bool MASH_AVG_AUX2 =
-#ifdef MASH_AVG_A2
-true;
-#else
-false;
-#endif
-
-constexpr bool MASH_AVG_AUX3 =
-#ifdef MASH_AVG_A3
-true;
-#else
-false;
-#endif
-
 
 #endif

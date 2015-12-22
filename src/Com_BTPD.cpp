@@ -48,16 +48,16 @@ unsigned long lastBTPD;
 void updateBTPD() {
 	if (millis() - lastBTPD > BTPD_INTERVAL) {
 		#ifdef BTPD_HLT_TEMP
-		sendVesselTemp(BTPD_MASH_TEMP, vessels[VS_HLT]);
+			sendVsTemp(BTPD_HLT_TEMP, TS_HLT, VS_HLT);
 		#endif
 		#ifdef BTPD_MASH_TEMP
-			sendVesselTemp(BTPD_MASH_TEMP, vessels[VS_MASH]);
+			sendVsTemp(BTPD_MASH_TEMP, TS_MASH, VS_MASH);
 		#endif
 		#ifdef BTPD_KETTLE_TEMP
-			sendVesselTemp(BTPD_MASH_TEMP, vessels[VS_KETTLE]);
+			sendVsTemp(BTPD_KETTLE_TEMP, TS_KETTLE, VS_KETTLE);
 		#endif
 		#ifdef BTPD_KETTLE_TEMPTIME
-			sendFloatsBTPD(BTPD_KETTLE_TEMPTIME, vessels[VS_KETTLE]->getTemperature() , timer2Float(timerValue[TIMER_BOIL]));
+			sendFloatsBTPD(BTPD_KETTLE_TEMPTIME, temp[TS_KETTLE] / 100.0, timer2Float(timerValue[TIMER_BOIL]));
 		#endif
 		#ifdef BTPD_H2O_TEMPS
 			sendFloatsBTPD(BTPD_H2O_TEMPS, temp[TS_H2OIN] / 100.0, temp[TS_H2OOUT] / 100.0);
@@ -103,13 +103,13 @@ void updateBTPD() {
 			#endif
 		} else {
 			#ifdef BTPD_HLT_VOL
-				sendVesselVol(BTPD_HLT_VOL, vessels[VS_HLT]);
+				sendVsVol(BTPD_HLT_VOL, TS_HLT);
 			#endif
 			#ifdef BTPD_MASH_VOL
-				sendVesselVol(BTPD_MASH_VOL, vessels[VS_MASH]);
+				sendVsVol(BTPD_MASH_VOL, TS_MASH);
 			#endif
 			#ifdef BTPD_KETTLE_VOL
-				sendVesselVol(BTPD_KETTLE_VOL, vessels[VS_KETTLE]);
+				sendVsVol(BTPD_KETTLE_VOL, TS_KETTLE);
 			#endif
 		}
 		// the temps with no volume always display
@@ -140,25 +140,13 @@ void sendVsTemp(byte chan, byte sensor, byte vessel) {
   if (temp[sensor] == BAD_TEMP )
     sendStringBTPD(chan, "    ----");
   else
-    sendFloatsBTPD(chan, vessels[vessel]->getSetpoint() , vessels[vessel]->getTemperature());
-}
-
-void sendVesselTemp(byte chan, Vessel* v)
-{
-	if (v->getTemperature() == BAD_TEMP)
-		sendStringBTPD(chan, "    ----");
-	else
-		sendFloatsBTPD(chan, v->getSetpoint(), v->getTemperature());
+    sendFloatsBTPD(chan, setpoint[vessel] / 100.0, temp[sensor] / 100.0);
 }
 
 void sendVsVol(byte chan, byte vessel) {
-  sendFloatsBTPD(chan, vessels[vessel]->getTargetVolume() , vessels[vessel]->getVolume() );
+  sendFloatsBTPD(chan, tgtVol[vessel] / 1000.0, volAvg[vessel] / 1000.0);
 }
 
-void sendVesselVol(byte chan, Vessel* v)
-{
-	sendFloatsBTPD(chan, v->getVolume(), v->getTargetVolume());
-}
 void sendStringBTPD(byte chan, const char *string) {
   Wire.beginTransmission(chan);
   Wire.write((uint8_t *)string, strlen(string));
