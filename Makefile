@@ -137,19 +137,6 @@ BrewTroller-OT_DX1_RIMSDF.elf/fast:
 	$(MAKE) -f src/CMakeFiles/BrewTroller-OT_DX1_RIMSDF.elf.dir/build.make src/CMakeFiles/BrewTroller-OT_DX1_RIMSDF.elf.dir/build
 .PHONY : BrewTroller-OT_DX1_RIMSDF.elf/fast
 
-#=============================================================================
-# Target rules for targets named disassemble_BrewTroller-OT_DX1_RIMSDF
-
-# Build rule for target.
-disassemble_BrewTroller-OT_DX1_RIMSDF: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 disassemble_BrewTroller-OT_DX1_RIMSDF
-.PHONY : disassemble_BrewTroller-OT_DX1_RIMSDF
-
-# fast build rule for target.
-disassemble_BrewTroller-OT_DX1_RIMSDF/fast:
-	$(MAKE) -f src/CMakeFiles/disassemble_BrewTroller-OT_DX1_RIMSDF.dir/build.make src/CMakeFiles/disassemble_BrewTroller-OT_DX1_RIMSDF.dir/build
-.PHONY : disassemble_BrewTroller-OT_DX1_RIMSDF/fast
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -161,7 +148,6 @@ help:
 	@echo "... BT-libs"
 	@echo "... BrewTroller-OT_DX1_RIMSDF"
 	@echo "... BrewTroller-OT_DX1_RIMSDF.elf"
-	@echo "... disassemble_BrewTroller-OT_DX1_RIMSDF"
 .PHONY : help
 
 

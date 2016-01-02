@@ -29,7 +29,7 @@ set(ARDUINO_HEADERS
         arduino/binary.h
         arduino/Client.h
         arduino/WString.h
-        arduino/wiring_private.h
+        arduino/wiring_pri #testvate.h
         arduino/USBCore.h
         arduino/USBDesc.h
         arduino/WCharacter.h
@@ -127,7 +127,7 @@ add_avr_library(BT-libs ${ARDUINO_SOURCE} ${ARDUINO_HEADERS}
                         ${ONEWIRE_SOURCES})
 						
 						
-else
+else(!${test})
 #Compilation path for x86 to allow robust testing
 
 # Build Arduino Libraries
@@ -149,4 +149,4 @@ add_avr_library(BT-libs
                         ${PID_SOURCES}
                         )
 				
-endif
+endif(!${test})

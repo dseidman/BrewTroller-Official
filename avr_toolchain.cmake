@@ -29,7 +29,7 @@ set(CMAKE_RANLIB ${RANLIB})
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
-else
+else(${test})
 
 # Setup CMake toolchain
 
@@ -53,7 +53,7 @@ if(NOT AVR_SIZE_ARGS)
     set(AVR_SIZE_ARGS -C;--mcu=${AVR_MCU})
 endif(NOT AVR_SIZE_ARGS)
 
-endif #test
+endif(${test})
 
 # Append Processor name to Target files
 if(WITH_MCU)
@@ -116,13 +116,13 @@ function(add_avr_executable EXECUTABLE_NAME)
 		  ${EXECUTABLE_NAME}
 		  ALL
 	   )
-   else
+   else(${test})
 	   add_custom_target(
 		  ${EXECUTABLE_NAME}
 		  ALL
 		  DEPENDS ${hex_file} ${eeprom_image}
 	   )
-	endif
+	endif(${test})
    set_target_properties(
       ${EXECUTABLE_NAME}
       PROPERTIES
@@ -143,7 +143,7 @@ function(add_avr_executable EXECUTABLE_NAME)
       ${AVR_OBJDUMP} -h -S ${elf_file} > ${EXECUTABLE_NAME}.lst
       DEPENDS ${elf_file}
    )
-   endif
+   endif(!${test})
 endfunction(add_avr_executable)
 
 ##########################################################################

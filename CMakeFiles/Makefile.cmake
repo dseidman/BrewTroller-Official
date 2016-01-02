@@ -44,5 +44,4 @@ SET(CMAKE_DEPEND_INFO_FILES
   "lib/CMakeFiles/BT-libs.dir/DependInfo.cmake"
   "src/CMakeFiles/BrewTroller-OT_DX1_RIMSDF.dir/DependInfo.cmake"
   "src/CMakeFiles/BrewTroller-OT_DX1_RIMSDF.elf.dir/DependInfo.cmake"
-  "src/CMakeFiles/disassemble_BrewTroller-OT_DX1_RIMSDF.dir/DependInfo.cmake"
   )
