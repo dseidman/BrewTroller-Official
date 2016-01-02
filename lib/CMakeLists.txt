@@ -1,3 +1,5 @@
+
+
 # Build Arduino Libraries
 set(ARDUINO_SOURCE
         arduino/avr-libc/malloc.c
@@ -95,6 +97,10 @@ set(ONEWIRE_SOURCES
     OneWire/OneWire.h
     OneWire/OneWire.cpp)
 
+
+if (!${test})
+#Normal compilation path
+
 #disable some compiler warnings for libraries
 set_source_files_properties(${ARDUINO_SOURCE} ${ARDUINO_HEADERS}
                             ${EEPROM_SOURCES}
@@ -119,3 +125,28 @@ add_avr_library(BT-libs ${ARDUINO_SOURCE} ${ARDUINO_HEADERS}
                         ${liquidcrystalfp_sources}
                         ${DS2482_SOURCES}
                         ${ONEWIRE_SOURCES})
+						
+						
+else
+#Compilation path for x86 to allow robust testing
+
+# Build Arduino Libraries
+#disable some compiler warnings for libraries
+set_source_files_properties(${ARDUINO_SOURCE} ${ARDUINO_HEADERS}
+                            ${EEPROM_SOURCES}
+                            ${TWOWIRE_SOURCES}
+                            ${ENCODER_SOURCES}
+                            ${FASTPIN_SOURCES}
+                            ${MENU_SOURCES}
+                            ${MODBUS_SOURCES}
+                            ${PID_SOURCES}
+                            ${liquidcrystalfp_sources}
+                            ${DS2482_SOURCES}
+                            ${ONEWIRE_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-sign-compare -Wno-unused-variable -Wno-strict-aliasing -Wno-attributes -Wno-parentheses -Wno-return-type -Wno-maybe-uninitialized")
+
+#Build only BT and PID for x86; the others get stubbed out for the test code.
+add_avr_library(BT-libs 
+                        ${PID_SOURCES}
+                        )
+				
+endif

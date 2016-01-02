@@ -3,8 +3,13 @@
 
 #define BUILDNUM 3
 
+#cmakedefine TEST
+#ifndef TEST
 #include <Arduino.h>
 #include <pin.h>
+#else
+#include "ArduinoTestFramework.h"
+#endif
 #include <PID_Beta6.h>
 
 #include "HardwareProfile.h"

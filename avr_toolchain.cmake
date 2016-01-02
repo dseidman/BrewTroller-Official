@@ -12,7 +12,28 @@ find_program(AVR_SIZE_TOOL avr-size)
 find_program(AVR_OBJDUMP avr-objdump)
 find_program(AVR_RANLIB avr-ranlib)
 
+# Find `GCC toolchain executables for x86 compilation
+if (${test})
+find_program(CC gcc)
+find_program(CXX g++)
+find_program(OBJCOPY objcopy)
+find_program(SIZE_TOOL size)
+find_program(OBJDUMP objdump)
+find_program(RANLIB ranlib)
+
+set(CMAKE_SYSTEM_NAME Intel)
+set(CMAKE_SYSTEM_PROCESSOR x86)
+set(CMAKE_C_COMPILER ${CC})
+set(CMAKE_CXX_COMPILER ${CXX})
+set(CMAKE_RANLIB ${RANLIB})
+set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
+
+else
+
 # Setup CMake toolchain
+
+
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR avr)
 set(CMAKE_C_COMPILER ${AVR_CC})
@@ -31,6 +52,8 @@ set(CMAKE_CXX_LINK_FLAGS "")
 if(NOT AVR_SIZE_ARGS)
     set(AVR_SIZE_ARGS -C;--mcu=${AVR_MCU})
 endif(NOT AVR_SIZE_ARGS)
+
+endif #test
 
 # Append Processor name to Target files
 if(WITH_MCU)
@@ -81,19 +104,25 @@ function(add_avr_executable EXECUTABLE_NAME)
    # eeprom
    add_custom_command(
       OUTPUT ${eeprom_image}
-      COMMAND
+	  COMMAND
          ${AVR_OBJCOPY} -j .eeprom --set-section-flags=.eeprom=alloc,load
             --change-section-lma .eeprom=0 --no-change-warnings
             -O ihex ${elf_file} ${eeprom_image}
       DEPENDS ${elf_file}
    )
 
-   add_custom_target(
-      ${EXECUTABLE_NAME}
-      ALL
-      DEPENDS ${hex_file} ${eeprom_image}
-   )
-
+   if(${test})
+	  add_custom_target(
+		  ${EXECUTABLE_NAME}
+		  ALL
+	   )
+   else
+	   add_custom_target(
+		  ${EXECUTABLE_NAME}
+		  ALL
+		  DEPENDS ${hex_file} ${eeprom_image}
+	   )
+	endif
    set_target_properties(
       ${EXECUTABLE_NAME}
       PROPERTIES
@@ -108,12 +137,13 @@ function(add_avr_executable EXECUTABLE_NAME)
    )
 
    # disassemble
+   if (!${test})
    add_custom_target(
       disassemble_${EXECUTABLE_NAME}
       ${AVR_OBJDUMP} -h -S ${elf_file} > ${EXECUTABLE_NAME}.lst
       DEPENDS ${elf_file}
    )
-
+   endif
 endfunction(add_avr_executable)
 
 ##########################################################################
@@ -181,5 +211,5 @@ function(avr_target_link_libraries EXECUTABLE_TARGET)
       endif(TARGET ${TGT})
    endforeach(TGT ${ARGN})
 
-   target_link_libraries(${TARGET_LIST} ${NON_TARGET_LIST})
+target_link_libraries(${TARGET_LIST} ${NON_TARGET_LIST})
 endfunction(avr_target_link_libraries EXECUTABLE_TARGET)

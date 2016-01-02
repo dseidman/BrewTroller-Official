@@ -78,6 +78,7 @@ void pwmInit( void )
 // a count of 1 could cause an interrupts 1 processor clock cycle after this interrupt is called 
 // sinse it's called at bottom, and sinse this has a fair amount of code in it, it's good to let the 
 // compare interrupts interrupt this interrupt (same with the UART and timer0 interrupts)
+#ifndef TEST
 ISR(TIMER1_OVF_vect, ISR_NOBLOCK )
 {
 #if defined  PWM_HLT  || defined PWM_MASH || defined PWM_KETTLE || defined PWM_STEAM || defined PWM_PUMP1 || defined PWM_PUMP2
@@ -113,7 +114,7 @@ ISR(TIMER1_OVF_vect, ISR_NOBLOCK )
 	}
 #endif
 }
-
+#endif //ifndef TEST
 #endif //PWM_BY_TIMER
 
 
