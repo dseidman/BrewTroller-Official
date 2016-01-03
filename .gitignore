@@ -3,6 +3,7 @@
 
 # Compiled Object files
 *.o
+*.obj
 
 # Compiled Static libraries
 *.a
@@ -17,5 +18,13 @@ build/*
 #VS files
 .vs/*
 BT.VC.opendb
-BT.sdf
+BT.sdfake
 BT.sln
+
+#CMake-generated files
+CMakeFiles/*
+lib/CMakeFiles/*
+src/CMakeFiles/*
+CMakeCache.txt
+Config.h
+Makefile

@@ -126,20 +126,6 @@ BrewTroller-OT_DX1_RIMSDF.elf/fast:
 	cd /home/david/Develop/BrewTroller-Official && $(MAKE) -f src/CMakeFiles/BrewTroller-OT_DX1_RIMSDF.elf.dir/build.make src/CMakeFiles/BrewTroller-OT_DX1_RIMSDF.elf.dir/build
 .PHONY : BrewTroller-OT_DX1_RIMSDF.elf/fast
 
-# Convenience name for target.
-src/CMakeFiles/disassemble_BrewTroller-OT_DX1_RIMSDF.dir/rule:
-	cd /home/david/Develop/BrewTroller-Official && $(MAKE) -f CMakeFiles/Makefile2 src/CMakeFiles/disassemble_BrewTroller-OT_DX1_RIMSDF.dir/rule
-.PHONY : src/CMakeFiles/disassemble_BrewTroller-OT_DX1_RIMSDF.dir/rule
-
-# Convenience name for target.
-disassemble_BrewTroller-OT_DX1_RIMSDF: src/CMakeFiles/disassemble_BrewTroller-OT_DX1_RIMSDF.dir/rule
-.PHONY : disassemble_BrewTroller-OT_DX1_RIMSDF
-
-# fast build rule for target.
-disassemble_BrewTroller-OT_DX1_RIMSDF/fast:
-	cd /home/david/Develop/BrewTroller-Official && $(MAKE) -f src/CMakeFiles/disassemble_BrewTroller-OT_DX1_RIMSDF.dir/build.make src/CMakeFiles/disassemble_BrewTroller-OT_DX1_RIMSDF.dir/build
-.PHONY : disassemble_BrewTroller-OT_DX1_RIMSDF/fast
-
 BrewCore.obj: BrewCore.cpp.obj
 .PHONY : BrewCore.obj
 
@@ -580,7 +566,6 @@ help:
 	@echo "... depend"
 	@echo "... BrewTroller-OT_DX1_RIMSDF"
 	@echo "... BrewTroller-OT_DX1_RIMSDF.elf"
-	@echo "... disassemble_BrewTroller-OT_DX1_RIMSDF"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... BrewCore.obj"
