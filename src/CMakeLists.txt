@@ -1,4 +1,6 @@
 # Source files for BrewTroller
+
+if (!${test})
 set(SOURCE_FILES
         BrewCore.cpp
         BrewCore.h
@@ -39,6 +41,64 @@ set(SOURCE_FILES
 		Vessel.cpp
         Volume.cpp
         Volume.h)
+else
+set(SOURCE_FILES
+#Includes test/* files and does not include UI_LCD.h and Temp.h, which can't feasibly be compiled for x86 without implementing I2C and OneWire
+#test harnesses. Those functions are replaced by testing definitions.
+        BrewCore.cpp
+        BrewCore.h
+        BrewTroller.cpp
+        BrewTroller.h
+        Com.cpp
+        Com.h
+        Com_BTnic.h
+        Com_BTPD.cpp
+        Com_BTPD.h
+        Com_RGBIO8.cpp
+        Com_RGBIO8.h
+        Com_S0ASC.cpp
+        EEPROM.cpp
+        EEPROM.h
+        Enum.h
+        Events.cpp
+        Events.h
+        HardwareProfile.h
+        Outputs.cpp
+        Outputs.h
+        PVOut.h
+        PVOut.cpp
+		test/ArduinoTestFramework.h
+		test/ArduinoTestFramework.cpp
+		test/BTTestFramework.h
+		test/BTTestFramework.cpp
+		test/test_EEPROM.h
+		test/test_Encoder.h
+		test/test_LCD.h
+		test/test_LCD.cpp
+		test/test_pin.h
+		test/test_pin.cpp
+		test/test_Serial.h
+		test/Temp.h
+		test/Temp.cpp
+		test/unit/unitTests.cpp
+		test/unit/Vessel_UnitTest.cpp
+		test/unit/Vessel_UnitTest.h
+        Steplogic.cpp
+        Steplogic.h
+        Timer.cpp
+        Timer.h
+        UI.cpp
+        UI.h
+        UIStrings.h
+        UIStrings.cpp
+        Util.cpp
+        Util.h
+		Vessel.h
+		Vessel.cpp
+        Volume.cpp
+        Volume.h)
+endif
+
 # Workaround to enable generated Config header to include Enum header
 #    *The Config header should get refactored to remove its dependancy on the Enum header*
 set(ENUM_HEADER "${CMAKE_CURRENT_LIST_DIR}/Enum.h")
