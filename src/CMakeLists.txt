@@ -16,6 +16,8 @@ set(SOURCE_FILES
         Com_S0ASC.cpp
         EEPROM.cpp
         EEPROM.h
+        FlowController.cpp
+        FlowController.h
         Enum.h
         Events.cpp
         Events.h
@@ -37,8 +39,8 @@ set(SOURCE_FILES
         UIStrings.cpp
         Util.cpp
         Util.h
-		Vessel.h
-		Vessel.cpp
+	Vessel.h
+	Vessel.cpp
         Volume.cpp
         Volume.h)
 else
