@@ -61,7 +61,7 @@ Compiled on Arduino-0022 (http://arduino.cc/en/Main/Software)
 #include "StepLogic.h"
 #include "Outputs.h"
 #include "Events.h"
-#include "EEPROM.hpp"
+#include "ConfigManager.hpp"
 #include "Temp.h"
 #include "BrewCore.h"
 #include "Com.h"
@@ -72,14 +72,6 @@ const void(* softReset) (void) = 0;
 //**********************************************************************************
 // Compile Time Logic
 //**********************************************************************************
-
-#ifdef USEMETRIC
-  #define SETPOINT_MULT 50
-  #define SETPOINT_DIV 2
-#else
-#define SETPOINT_MULT 100
-#define SETPOINT_DIV 1
-#endif
 
 #ifndef STRIKE_TEMP_OFFSET
   #define STRIKE_TEMP_OFFSET 0

@@ -13,6 +13,7 @@
 
 #build directory
 build/*
+tests/build
 
 #VS files
 .vs/*
