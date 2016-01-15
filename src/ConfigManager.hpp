@@ -45,7 +45,7 @@ typedef uint32_t VolumeCalibs[VOL_CALIB_COUNT];
 typedef uint16_t VolCalibData[VOL_CALIB_COUNT];
 
 struct program_config {
-    char name[PROG_NAME_LEN];
+    char name[PROG_\NAME_LEN];
     
     //Padding inserted for backwards compatability
     //TODO: Remove all padding
